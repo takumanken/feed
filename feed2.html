@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terminal-Style Trump 2nd Term Summary</title>
+  <style>
+    body {
+      background-color: #fff;
+      color: #000;
+      font-family: "Courier New", monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 90vh;
+      margin: 0;
+      padding: 20px;
+    }
+    .typing-container {
+      font-size: 1.4rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      text-align: left;
+      width: 80%;
+      padding: 10px;
+      margin-bottom: 0px;
+      position: relative;
+    }
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background-color: #000;
+      animation: blink 0.7s steps(1) infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    .chart-container {
+      width: 80%;
+      font-family: "Courier New", monospace;
+      padding: 10px;
+      font-size: 1.2rem;
+    }
+    .chart-row {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+    }
+    .president-label {
+      width: 300px;
+      text-align: left;
+      margin-right: 20px;
+    }
+    .bar-container {
+      background-color: #fff;
+      flex-grow: 1;
+      height: 24px;
+      position: relative;
+      margin-right: 20px;
+    }
+    .bar {
+      background-color: #3b3b3b;
+      height: 100%;
+    }
+    .count-label {
+      width: 50px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="typing-container" id="typing">
+    <span id="typedText">Loading...</span><span id="cursor" class="cursor"></span>
+  </div>
+  <div class="chart-container" id="chartContainer"></div>
+
+  <!-- Add D3.js CDN -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <script>
+    (async function () {
+      const trump2ndStartDate = "2025-01-20";
+      const ordersEndpoint = "/data/trump_executive_orders.json";
+      const pastEndpoint = "/data/past_president_executive_orders.json";
+
+      function getGreeting() {
+        const now = new Date();
+        const hour = now.getHours();
+        if (hour < 12) return "Good morning";
+        else if (hour < 18) return "Good afternoon";
+        else return "Good evening";
+      }
+
+      function daysBetween(date1, date2) {
+        const msPerDay = 1000 * 60 * 60 * 24;
+        return Math.floor((date2 - date1) / msPerDay);
+      }
+
+      const now = new Date();
+      const greeting = getGreeting();
+      const termStart = new Date(trump2ndStartDate);
+      const daysIntoTerm = daysBetween(termStart, now);
+
+      // --- Fetch Trump's Executive Orders ---
+      let trumpCount = 0;
+      try {
+        const response = await fetch(ordersEndpoint);
+        const data = await response.json();
+        const orders = data.results;
+        trumpCount = orders.length;
+      } catch (error) {
+        console.error("Error fetching Trump's executive orders data:", error);
+      }
+
+      // --- Fetch Past Presidents' Data ---
+      let pastDataArray = [];
+      try {
+        const pastResponse = await fetch(pastEndpoint);
+        const pastData = await pastResponse.json();
+        pastDataArray = pastData.results ? pastData.results : pastData;
+      } catch (error) {
+        console.error("Error fetching past executive orders data:", error);
+      }
+
+      // --- Use d3.rollup to count executive orders per president within daysIntoTerm ---
+      const presidentCountsMap = d3.rollup(
+        pastDataArray.filter(order => {
+          const startDate = new Date(order.start_date);
+          const signingDate = new Date(order.signing_date);
+          const diff = daysBetween(startDate, signingDate);
+          return diff <= daysIntoTerm;
+        }),
+        v => v.length,
+        d => d.president
+      );
+
+      // Convert to array of objects and add Trump's count
+      const presidentsResults = [
+        { president: "Donald Trump 2nd", count: trumpCount },
+        ...Array.from(presidentCountsMap, ([president, count]) => ({ president, count }))
+      ];
+
+      console.log(presidentsResults);
+
+      // Determine the max count for scaling
+      const maxCountOverall = d3.max(presidentsResults, d => d.count);
+
+      // --- Compose Full Text ---
+      let fullText = `
+${greeting}, America.
+Today is the ${daysIntoTerm} day of President Trump's second term.
+
+Thus far, he has signed ${trumpCount} executive orders.\n`;
+      fullText += `Let us compare his pace to that of the last ten presidents.`;
+
+      // --- Typing Effect ---
+      const typedTextEl = document.getElementById("typedText");
+      typedTextEl.textContent = "";
+
+      let charIndex = 0;
+      function typeText() {
+        if (charIndex < fullText.length) {
+          const currentChar = fullText.charAt(charIndex);
+          if (currentChar === "\n") {
+            typedTextEl.innerHTML += "<br>";
+          } else {
+            typedTextEl.innerHTML += currentChar;
+          }
+          charIndex++;
+          setTimeout(typeText, 50);
+        } else {
+          showLoading(renderChart);
+        }
+      }
+
+      function showLoading(callback) {
+        let dotCount = 0;
+        const loadingInterval = setInterval(() => {
+          dotCount = (dotCount + 1) % 4;
+          typedTextEl.innerHTML = fullText.split("\n").join("<br>") + "<br><br><br>Loading" + ".".repeat(dotCount);
+        }, 500);
+        setTimeout(() => {
+          clearInterval(loadingInterval);
+          typedTextEl.innerHTML = fullText.split("\n").join("<br>");
+          callback();
+        }, 4000);
+      }
+
+      // --- Render Chart ---
+      function renderChart() {
+        const chartContainer = document.getElementById("chartContainer");
+        chartContainer.innerHTML = "";
+
+        function createChartRow(label, count) {
+          const row = document.createElement("div");
+          row.className = "chart-row";
+
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "president-label";
+          nameSpan.textContent = label;
+          row.appendChild(nameSpan);
+
+          const barContainer = document.createElement("div");
+          barContainer.className = "bar-container";
+
+          const bar = document.createElement("div");
+          bar.className = "bar";
+
+          const percentage = maxCountOverall > 0 ? (count / maxCountOverall) * 100 : 0;
+          bar.style.width = percentage + "%";
+
+          barContainer.appendChild(bar);
+          row.appendChild(barContainer);
+
+          const countSpan = document.createElement("span");
+          countSpan.className = "count-label";
+          countSpan.textContent = count;
+          row.appendChild(countSpan);
+
+          return row;
+        }
+
+        // Render each president row from consolidated results
+        presidentsResults.forEach(entry => {
+          chartContainer.appendChild(createChartRow(entry.president, entry.count));
+        });
+
+        // Stop cursor blinking
+        const cursorEl = document.getElementById("cursor");
+        if (cursorEl) {
+          cursorEl.style.display = "none";
+        }
+      }
+
+      // Start typing!
+      typeText();
+    })();
+  </script>
+</body>
+</html>

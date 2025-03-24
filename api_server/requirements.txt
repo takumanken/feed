@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+slowapi
+pandas
+google-genai
