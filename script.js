@@ -129,18 +129,16 @@
 
   if (isAfterTerm) {
     baseText = `
-      Did you remember that Trump used to be president?
-      In his second term, President Trump signed ${trumpOrderCount} executive orders.
-
-      Let us compare his pace to that of the ten presidents before his presidency.
+Did you remember that Trump used to be president?
+In his second term, President Trump signed ${trumpOrderCount} executive orders.\n
+Let us compare his pace to that of the ten presidents before his presidency.
     `;
   } else {
     baseText = `
-      Today is the ${daysInOffice} day of President Trump's second term.
-      So far, he has signed ${trumpOrderCount} executive orders.
-
-      Let us compare his pace to that of the last ten presidents.
-    `;
+Today is the ${daysInOffice} day of President Trump's second term.
+So far, he has signed ${trumpOrderCount} executive orders.\n
+Let us compare his pace to that of the last ten presidents.
+`;
   }
 
   const reactionStarterList = REACTION_STARTERS.map((starter) => `- "${starter}"`).join("\n     ");
