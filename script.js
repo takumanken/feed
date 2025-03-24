@@ -1,13 +1,13 @@
 (async function () {
-  // ------------------ Animation Speed Configurations ------------------
-  const typingSpeed = 20;
-  const loadingSpeed = 400;
-  const loadingDuration = 4000;
-
   // ------------------ Basic Configuration ------------------
   const trump2ndStartDate = "2025-01-20";
-  const initialTrumpOrdersUrl = "https://www.federalregister.gov/api/v1/documents?..."; // shortened for readability
+  const initialTrumpOrdersUrl =
+    "https://www.federalregister.gov/api/v1/documents?conditions%5Bcorrection%5D=0&conditions%5Bpresident%5D=donald-trump&conditions%5Bpresidential_document_type%5D=executive_order&conditions%5Bsigning_date%5D%5Bgte%5D=01%2F20%2F2025&conditions%5Bsigning_date%5D%5Blte%5D=03%2F25%2F2025&conditions%5Btype%5D%5B%5D=PRESDOCU&fields%5B%5D=citation&fields%5B%5D=document_number&fields%5B%5D=end_page&fields%5B%5D=html_url&fields%5B%5D=pdf_url&fields%5B%5D=type&fields%5B%5D=subtype&fields%5B%5D=publication_date&fields%5B%5D=signing_date&fields%5B%5D=start_page&fields%5B%5D=title&fields%5B%5D=disposition_notes&fields%5B%5D=executive_order_number&fields%5B%5D=not_received_for_publication&fields%5B%5D=full_text_xml_url&fields%5B%5D=body_html_url&fields%5B%5D=json_url&format=json&include_pre_1994_docs=true&order=executive_order&page=1&per_page=1000";
   const pastPresUrl = "data/past_president_executive_orders.json";
+
+  // ------------------ Animation Speed Variables ------------------
+  const typingSpeed = 20;
+  const loadingSpeed = 500;
 
   // ------------------ Helper Functions ------------------
   function getGreeting() {
@@ -29,12 +29,22 @@
     try {
       while (currentUrl) {
         console.log(`Fetching: ${currentUrl}`);
+
         const response = await fetch(currentUrl);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
         const data = await response.json();
-        if (Array.isArray(data.results)) allResults = allResults.concat(data.results);
+
+        if (Array.isArray(data.results)) {
+          allResults = allResults.concat(data.results);
+        }
+
         currentUrl = data.next_page_url || null;
       }
+
       console.log("Fetched all Trump executive orders:", allResults);
       return allResults;
     } catch (error) {
@@ -52,6 +62,10 @@
   // ------------------ Fetch Trump's Orders (UPDATED) ------------------
   let trumpResults = [];
   try {
+    // ORIGINAL FETCH
+    // trumpResults = await fetchAllResults(initialTrumpOrdersUrl);
+
+    // FILE-BASED FETCH
     const response = await fetch("data/trump_executive_orders.json");
     const data = await response.json();
     trumpResults = data.results || [];
@@ -139,7 +153,7 @@ Let us compare his pace to that of the last ten presidents.`;
       clearInterval(loadingInterval);
       typedTextEl.innerHTML = initialText.split("\n").join("<br>");
       renderChart();
-    }, loadingDuration);
+    }, 3000);
   }
 
   // ------------------ Chart Rendering ------------------
