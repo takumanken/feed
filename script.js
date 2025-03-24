@@ -1,15 +1,20 @@
 (async function () {
-  // ------------------ Basic Configuration ------------------
-  const trump2ndStartDate = "2025-01-20";
-  const initialTrumpOrdersUrl =
-    "https://www.federalregister.gov/api/v1/documents?conditions%5Bcorrection%5D=0&conditions%5Bpresident%5D=donald-trump&conditions%5Bpresidential_document_type%5D=executive_order&conditions%5Bsigning_date%5D%5Bgte%5D=01%2F20%2F2025&conditions%5Bsigning_date%5D%5Blte%5D=03%2F25%2F2025&conditions%5Btype%5D%5B%5D=PRESDOCU&fields%5B%5D=citation&fields%5B%5D=document_number&fields%5B%5D=end_page&fields%5B%5D=html_url&fields%5B%5D=pdf_url&fields%5B%5D=type&fields%5B%5D=subtype&fields%5B%5D=publication_date&fields%5B%5D=signing_date&fields%5B%5D=start_page&fields%5B%5D=title&fields%5B%5D=disposition_notes&fields%5B%5D=executive_order_number&fields%5B%5D=not_received_for_publication&fields%5B%5D=full_text_xml_url&fields%5B%5D=body_html_url&fields%5B%5D=json_url&format=json&include_pre_1994_docs=true&order=executive_order&page=1&per_page=1000";
-  const pastPresUrl = "data/past_president_executive_orders.json";
+  // Config
+  const trumpSecondTermStartDate = "2025-01-20";
 
-  // ------------------ Animation Speed Variables ------------------
+  // Animation speed (ms)
   const typingSpeed = 20;
-  const loadingSpeed = 500;
+  const loadingIntervalSpeed = 500;
 
-  // ------------------ Helper Functions ------------------
+  // Paths & URLs
+  const trumpOrdersApiUrl =
+    "https://www.federalregister.gov/api/v1/documents?conditions%5Bcorrection%5D=0&conditions%5Bpresident%5D=donald-trump&conditions%5Bpresidential_document_type%5D=executive_order&conditions%5Bsigning_date%5D%5Bgte%5D=01%2F20%2F2025&conditions%5Bsigning_date%5D%5Blte%5D=03%2F25%2F2025&conditions%5Btype%5D%5B%5D=PRESDOCU&fields%5B%5D=citation&fields%5B%5D=document_number&fields%5B%5D=end_page&fields%5B%5D=html_url&fields%5B%5D=pdf_url&fields%5B%5D=type&fields%5B%5D=subtype&fields%5B%5D=publication_date&fields%5B%5D=signing_date&fields%5B%5D=start_page&fields%5B%5D=title&fields%5B%5D=disposition_notes&fields%5B%5D=executive_order_number&fields%5B%5D=not_received_for_publication&fields%5B%5D=full_text_xml_url&fields%5B%5D=body_html_url&fields%5B%5D=json_url&format=json&include_pre_1994_docs=true&order=executive_order&page=1&per_page=1000";
+
+  const trumpOrdersLocalPath = "data/trump_executive_orders.json";
+  const pastPresidentsOrdersPath = "data/past_president_executive_orders.json";
+  const externalApiUrl = "https://feed-production-dd21.up.railway.app/process";
+
+  // Helpers
   function getGreeting() {
     const hour = new Date().getHours();
     if (hour >= 4 && hour < 12) return "Good morning";
@@ -17,19 +22,18 @@
     return "Good evening";
   }
 
-  function daysBetween(date1, date2) {
+  function getDaysBetween(date1, date2) {
     const msPerDay = 1000 * 60 * 60 * 24;
     return Math.floor((date2 - date1) / msPerDay);
   }
 
-  async function fetchAllResults(initialUrl) {
-    let currentUrl = initialUrl;
-    let allResults = [];
+  async function fetchAllPaginatedResults(url) {
+    let currentUrl = url;
+    let results = [];
 
     try {
       while (currentUrl) {
         console.log(`Fetching: ${currentUrl}`);
-
         const response = await fetch(currentUrl);
 
         if (!response.ok) {
@@ -37,182 +41,183 @@
         }
 
         const data = await response.json();
-
         if (Array.isArray(data.results)) {
-          allResults = allResults.concat(data.results);
+          results = results.concat(data.results);
         }
 
         currentUrl = data.next_page_url || null;
       }
 
-      console.log("Fetched all Trump executive orders:", allResults);
-      return allResults;
+      console.log("Fetched all results:", results);
+      return results;
     } catch (error) {
-      console.error("Error fetching Trump executive orders:", error);
+      console.error("Error fetching data:", error);
       return [];
     }
   }
 
-  // ------------------ Calculate Days in Term ------------------
-  const now = new Date();
-  const greeting = getGreeting();
-  const termStart = new Date(trump2ndStartDate);
-  const daysIntoTerm = daysBetween(termStart, now);
+  // Data preparation
+  const currentDate = new Date();
+  const greetingText = getGreeting();
+  const termStartDate = new Date(trumpSecondTermStartDate);
+  const daysInOffice = getDaysBetween(termStartDate, currentDate);
 
-  // ------------------ Fetch Trump's Orders (UPDATED) ------------------
-  let trumpResults = [];
+  // Fetch Trump's orders
+  let trumpOrders = [];
   try {
-    // ORIGINAL FETCH
-    // trumpResults = await fetchAllResults(initialTrumpOrdersUrl);
-
-    // FILE-BASED FETCH
-    const response = await fetch("data/trump_executive_orders.json");
+    // trumpOrders = await fetchAllPaginatedResults(trumpOrdersApiUrl);
+    const response = await fetch(trumpOrdersLocalPath);
     const data = await response.json();
-    trumpResults = data.results || [];
+    trumpOrders = data.results || [];
   } catch (error) {
-    console.error("Error fetching Trump's orders:", error);
+    console.error("Error fetching Trump orders:", error);
   }
 
-  const trumpCount = trumpResults.length;
+  const trumpOrderCount = trumpOrders.length;
 
-  // ------------------ Fetch Past Presidents' Data ------------------
-  let pastDataArray = [];
+  // Fetch past presidents' orders
+  let pastPresidentsOrders = [];
   try {
-    const pastResponse = await fetch(pastPresUrl);
-    const pastData = await pastResponse.json();
-    pastDataArray = pastData.results ? pastData.results : pastData;
+    const response = await fetch(pastPresidentsOrdersPath);
+    const data = await response.json();
+    pastPresidentsOrders = data.results || data;
   } catch (error) {
     console.error("Error fetching past presidents' data:", error);
   }
 
-  const filteredPastData = pastDataArray.filter((order) => {
-    const startDate = new Date(order.start_date);
+  const comparablePastOrders = pastPresidentsOrders.filter((order) => {
+    const termStart = new Date(order.start_date);
     const signingDate = new Date(order.signing_date);
-    return daysBetween(startDate, signingDate) <= daysIntoTerm;
+    return getDaysBetween(termStart, signingDate) <= daysInOffice;
   });
 
-  const presidentCountsMap = d3.rollup(
-    filteredPastData,
+  const pastPresidentsCounts = d3.rollup(
+    comparablePastOrders,
     (orders) => orders.length,
     (order) => order.president
   );
 
-  const presidentsResults = [
-    { president: "Donald Trump 2nd", count: trumpCount },
-    ...Array.from(presidentCountsMap, ([president, count]) => ({ president, count })),
+  const combinedResults = [
+    { president: "Donald Trump 2nd", count: trumpOrderCount },
+    ...Array.from(pastPresidentsCounts, ([president, count]) => ({
+      president,
+      count,
+    })),
   ];
 
-  const promptText = `Trump's 2nd days in office: ${daysIntoTerm}\n` + `result: ${JSON.stringify(presidentsResults)}`;
-  console.log(promptText);
+  const apiPrompt = `Trump's 2nd days in office: ${daysInOffice}\nresult: ${JSON.stringify(combinedResults)}`;
 
-  // ------------------ Fetch Additional Text ------------------
-  let additionalText = "";
+  console.log(apiPrompt);
+
+  // Fetch additional analysis text
+  let additionalAnalysis = "";
   try {
-    const externalResponse = await fetch("https://feed-production-dd21.up.railway.app/process", {
+    const response = await fetch(externalApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: promptText }),
+      body: JSON.stringify({ prompt: apiPrompt }),
     });
-    const externalData = await externalResponse.json();
-    additionalText = (externalData.response || "").trim();
+    const data = await response.json();
+    additionalAnalysis = (data.response || "").trim();
   } catch (error) {
-    console.error("Error fetching external text:", error);
+    console.error("Error fetching external analysis:", error);
   }
 
-  // ------------------ First Typing Block ------------------
-  const typedTextEl = document.getElementById("typedText");
-  typedTextEl.textContent = "";
+  // Typing animation - first block
+  const firstTypedTextEl = document.getElementById("typedText");
+  firstTypedTextEl.textContent = "";
 
-  const initialText = `
-${greeting}, America.
-Today is the ${daysIntoTerm} day of President Trump's second term.
+  const introText = `
+${greetingText}, America.
+Today is the ${daysInOffice} day of President Trump's second term.
 
-So far, he has signed ${trumpCount} executive orders.
+So far, he has signed ${trumpOrderCount} executive orders.
 Let us compare his pace to that of the last ten presidents.`;
 
-  let charIndex = 0;
-  function typeText() {
-    if (charIndex < initialText.length) {
-      const currentChar = initialText.charAt(charIndex);
-      typedTextEl.innerHTML += currentChar === "\n" ? "<br>" : currentChar;
-      charIndex++;
-      setTimeout(typeText, typingSpeed);
+  let introCharIndex = 0;
+  function typeIntroText() {
+    if (introCharIndex < introText.length) {
+      const currentChar = introText.charAt(introCharIndex);
+      firstTypedTextEl.innerHTML += currentChar === "\n" ? "<br>" : currentChar;
+      introCharIndex++;
+      setTimeout(typeIntroText, typingSpeed);
     } else {
-      showLoadingThenChart();
+      showLoadingDots();
     }
   }
 
-  function showLoadingThenChart() {
+  function showLoadingDots() {
     let dotCount = 0;
     const loadingInterval = setInterval(() => {
       dotCount = (dotCount + 1) % 4;
-      typedTextEl.innerHTML = initialText.split("\n").join("<br>") + "<br><br><br>Loading" + ".".repeat(dotCount);
-    }, loadingSpeed);
+      firstTypedTextEl.innerHTML = introText.split("\n").join("<br>") + "<br><br><br>Loading" + ".".repeat(dotCount);
+    }, loadingIntervalSpeed);
 
     setTimeout(() => {
       clearInterval(loadingInterval);
-      typedTextEl.innerHTML = initialText.split("\n").join("<br>");
+      firstTypedTextEl.innerHTML = introText.split("\n").join("<br>");
       renderChart();
     }, 3000);
   }
 
-  // ------------------ Chart Rendering ------------------
+  // Chart rendering
   function renderChart() {
     const chartContainer = document.getElementById("chartContainer");
     chartContainer.innerHTML = "";
 
-    const maxCountOverall = d3.max(presidentsResults, (d) => d.count);
+    const maxOrderCount = d3.max(combinedResults, (d) => d.count);
 
-    function createChartRow(label, count) {
+    function createChartRow(president, count) {
       const row = document.createElement("div");
       row.className = "chart-row";
 
-      const nameSpan = document.createElement("span");
-      nameSpan.className = "president-label";
-      nameSpan.textContent = label;
-      row.appendChild(nameSpan);
+      const label = document.createElement("span");
+      label.className = "president-label";
+      label.textContent = president;
+      row.appendChild(label);
 
       const barContainer = document.createElement("div");
       barContainer.className = "bar-container";
 
       const bar = document.createElement("div");
       bar.className = "bar";
-      bar.style.width = maxCountOverall ? (count / maxCountOverall) * 100 + "%" : "0%";
+      bar.style.width = maxOrderCount ? (count / maxOrderCount) * 100 + "%" : "0%";
 
       barContainer.appendChild(bar);
       row.appendChild(barContainer);
 
-      const countSpan = document.createElement("span");
-      countSpan.className = "count-label";
-      countSpan.textContent = count;
-      row.appendChild(countSpan);
+      const countLabel = document.createElement("span");
+      countLabel.className = "count-label";
+      countLabel.textContent = count;
+      row.appendChild(countLabel);
 
       return row;
     }
 
-    presidentsResults.forEach((entry) => {
+    combinedResults.forEach((entry) => {
       chartContainer.appendChild(createChartRow(entry.president, entry.count));
     });
 
-    typeAdditionalText(additionalText);
+    typeAdditionalAnalysis(additionalAnalysis);
   }
 
-  // ------------------ Second Typing Block ------------------
-  function typeAdditionalText(str) {
-    const typedTextEl2 = document.getElementById("typedText2");
-    typedTextEl2.textContent = "";
+  // Typing animation - second block
+  function typeAdditionalAnalysis(text) {
+    const secondTypedTextEl = document.getElementById("typedText2");
+    secondTypedTextEl.textContent = "";
 
-    let i = 0;
-    function typeNext() {
-      if (i < str.length) {
-        typedTextEl2.innerHTML += str.charAt(i) === "\n" ? "<br>" : str.charAt(i);
-        i++;
-        setTimeout(typeNext, typingSpeed);
+    let charIndex = 0;
+    function typeNextChar() {
+      if (charIndex < text.length) {
+        const currentChar = text.charAt(charIndex);
+        secondTypedTextEl.innerHTML += currentChar === "\n" ? "<br>" : currentChar;
+        charIndex++;
+        setTimeout(typeNextChar, typingSpeed);
       }
     }
-    typeNext();
+    typeNextChar();
   }
 
-  // ------------------ Start the typing animation ------------------
-  typeText();
+  // Start
+  typeIntroText();
 })();
