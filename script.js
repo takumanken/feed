@@ -1,18 +1,29 @@
 (async function () {
-  // ------------------ Config ------------------
+  // Config
   const trumpSecondTermStartDate = "2025-01-20";
   const trumpSecondTermEndDate = "2029-01-20";
 
-  // Animation speed (ms)
   const typingSpeed = 20;
   const loadingIntervalSpeed = 500;
 
-  // Paths & URLs
+  const trumpOrdersApiUrl =
+    "https://www.federalregidster.gov/api/v1/documents?conditions%5Bcorrection%5D=0&conditions%5Bpresident%5D=donald-trump&conditions%5Bpresidential_document_type%5D=executive_order&conditions%5Bsigning_date%5D%5Bgte%5D=01%2F20%2F2025&conditions%5Bsigning_date%5D%5Blte%5D=03%2F25%2F2025&conditions%5Btype%5D%5B%5D=PRESDOCU&fields%5B%5D=citation&fields%5B%5D=document_number&fields%5B%5D=end_page&fields%5B%5D=html_url&fields%5B%5D=pdf_url&fields%5B%5D=type&fields%5B%5D=subtype&fields%5B%5D=publication_date&fields%5B%5D=signing_date&fields%5B%5D=start_page&fields%5B%5D=title&fields%5B%5D=disposition_notes&fields%5B%5D=executive_order_number&fields%5B%5D=not_received_for_publication&fields%5B%5D=full_text_xml_url&fields%5B%5D=body_html_url&fields%5B%5D=json_url&format=json&include_pre_1994_docs=true&order=executive_order&page=1&per_page=1000";
+
   const trumpOrdersLocalPath = "data/trump_executive_orders.json";
   const pastPresidentsOrdersPath = "data/past_president_executive_orders.json";
   const externalApiUrl = "https://feed-production-dd21.up.railway.app/process";
 
-  // ------------------ Helpers ------------------
+  const REACTION_STARTERS = [
+    "Hmm...",
+    "Wow...",
+    "Look at that...",
+    "Interestingly...",
+    "You know...",
+    "Whoa...",
+    "Guess what...",
+    "Surprisingly...",
+  ];
+
   function getGreeting() {
     const hour = new Date().getHours();
     if (hour >= 4 && hour < 12) return "Good morning";
@@ -25,9 +36,38 @@
     return Math.floor((date2 - date1) / msPerDay);
   }
 
-  // ------------------ Data preparation ------------------
+  async function fetchTrumpOrdersFromAPI(initialUrl) {
+    let currentUrl = initialUrl;
+    let allResults = [];
+
+    try {
+      while (currentUrl) {
+        console.log(`Fetching: ${currentUrl}`);
+        const response = await fetch(currentUrl);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data.results)) {
+          allResults = allResults.concat(data.results);
+        }
+
+        currentUrl = data.next_page_url || null;
+      }
+
+      console.log("Fetched all Trump executive orders:", allResults);
+      return allResults;
+    } catch (error) {
+      console.error("Error fetching Trump orders from API:", error);
+      return [];
+    }
+  }
+
   const currentDate = new Date();
-  // const currentDate = new Date("2029-01-21"); // Test date simulation
+  // const currentDate = new Date("2029-01-21");
 
   const greetingText = getGreeting();
   const termStartDate = new Date(trumpSecondTermStartDate);
@@ -35,19 +75,27 @@
   const daysInOffice = getDaysBetween(termStartDate, currentDate);
   const isAfterTerm = currentDate >= termEndDate;
 
-  // ------------------ Fetch Trump's orders ------------------
   let trumpOrders = [];
   try {
-    const response = await fetch(trumpOrdersLocalPath);
-    const data = await response.json();
-    trumpOrders = data.results || [];
+    // Use live API
+    trumpOrders = await fetchTrumpOrdersFromAPI(trumpOrdersApiUrl);
+
+    // Use local JSON for testing
+    // const response = await fetch(trumpOrdersLocalPath);
+    // const data = await response.json();
+    // trumpOrders = data.results || [];
+
+    if (trumpOrders.length === 0) {
+      throw new Error("Trump orders fetch returned empty.");
+    }
   } catch (error) {
     console.error("Error fetching Trump orders:", error);
+    displayServiceUnavailable();
+    return;
   }
 
   const trumpOrderCount = trumpOrders.length;
 
-  // ------------------ Fetch past presidents' orders ------------------
   let pastPresidentsOrders = [];
   try {
     const response = await fetch(pastPresidentsOrdersPath);
@@ -77,7 +125,6 @@
     })),
   ];
 
-  // ------------------ Compose base text ------------------
   let baseText = "";
 
   if (isAfterTerm) {
@@ -96,33 +143,26 @@
     `;
   }
 
-  // ------------------ Prepare the prompt for Gemini ------------------
+  const reactionStarterList = REACTION_STARTERS.map((starter) => `- "${starter}"`).join("\n     ");
+
   const apiPrompt = `
   You will be provided with:
   - Base sentences describing President Trump's second term, including the number of executive orders he signed and comparisons to past presidents.
   - Data showing the number of executive orders issued by Trump and the previous ten presidents.
   
   TASK:
-  1. Rewrite or tweak the base sentences to sound more casual, conversational, and natural.
+  1. Rewrite or tweak the base sentences to sound more casual, conversational, and natural like TV news.
   2. Never change the number of sentences and paragraph structure.
   3. Keep each sentence close to its original length (approximately 10 to 15 words).
   4. Maintain the original meaning and key information (numbers, timelines, comparisons).
   5. Feel free to vary phrasing and tone, but the content must stay accurate.
   6. Random variation in style is encouraged to prevent repetition across different requests.
-  7. For the **comparison sentence**, it must begin with a casual reaction phrase. Randomly choose one of the following openers:
-     - "Hmm..."
-     - "Wow..."
-     - "Look at that..."
-     - "Interestingly..."
-     - "You know..."
-     
-     For example:
-     - "Hmm... It looks like he's signing orders faster than most of his predecessors."
-     - "Wow... He seems to be outpacing a lot of presidents before him."
+  7. For the comparison sentence, it must begin with a casual reaction phrase. Randomly choose one of the following openers:
+     ${reactionStarterList}
   
   OUTPUT FORMAT:
   - Provide the updated text as plain text.
-  - You should never say "Okay, here's the rephrased text:" or similar phrases. Just return the specified text.
+  - Do not include any explanations or introductory remarks.
   - Ensure the comparison sentence appears on its own line at the end, beginning with one of the specified openers.
   
   DATA:
@@ -135,7 +175,6 @@
   ${JSON.stringify(combinedResults, null, 2)}
   `;
 
-  // ------------------ Fetch rewritten text from Gemini ------------------
   let rewrittenIntroText = "";
   let comparisonSentence = "";
 
@@ -148,26 +187,12 @@
     const data = await response.json();
     const fullText = (data.response || "").trim();
 
-    const reactionStarters = [
-      "Hmm...",
-      "Wow...",
-      "Look at that...",
-      "Interestingly...",
-      "You know...",
-      "Whoa...",
-      "Guess what...",
-      "Surprisingly...",
-    ];
-
-    // Find the first reaction sentence in Gemini's response
     let splitIndex = -1;
-    let matchedStarter = "";
 
-    for (let starter of reactionStarters) {
+    for (let starter of REACTION_STARTERS) {
       const index = fullText.indexOf(starter);
       if (index !== -1) {
         splitIndex = index;
-        matchedStarter = starter;
         break;
       }
     }
@@ -177,31 +202,27 @@
       comparisonSentence = fullText.substring(splitIndex).trim();
     } else {
       rewrittenIntroText = fullText;
-      comparisonSentence = "Hmm... It looks like he's signing orders at an average pace.";
-    }
-
-    if (splitIndex !== -1) {
-      rewrittenIntroText = fullText.substring(0, splitIndex).trim();
-      comparisonSentence = fullText.substring(splitIndex).trim();
-    } else {
-      rewrittenIntroText = fullText;
-      comparisonSentence = "Hmm... It looks like he's signing orders at an average pace.";
+      comparisonSentence = `${REACTION_STARTERS[0]} It looks like he's signing orders at an average pace.`;
     }
   } catch (error) {
     console.error("Error fetching rewritten text from Gemini:", error);
+    displayServiceUnavailable();
+    return;
+  }
 
-    // Fallback text if the request fails
-    rewrittenIntroText = isAfterTerm
-      ? `In his second term, President Trump signed ${trumpOrderCount} executive orders.`
-      : `Today is the ${daysInOffice} day of President Trump's second term.`;
+  function displayServiceUnavailable() {
+    const firstTypedTextEl = document.getElementById("typedText");
+    const chartContainer = document.getElementById("chartContainer");
+    const secondTypedTextEl = document.getElementById("typedText2");
 
-    comparisonSentence = "Hmm... It looks like he's signing orders faster than most of his predecessors.";
+    firstTypedTextEl.innerHTML = "🚧 This website is temporarily out of service. 🚧";
+    chartContainer.innerHTML = "";
+    secondTypedTextEl.innerHTML = "";
   }
 
   console.log("Rewritten Intro Text:", rewrittenIntroText);
   console.log("Comparison Sentence:", comparisonSentence);
 
-  // ------------------ Typing animation - first block ------------------
   const firstTypedTextEl = document.getElementById("typedText");
   firstTypedTextEl.textContent = "";
 
@@ -233,7 +254,6 @@
     }, 3000);
   }
 
-  // ------------------ Chart rendering ------------------
   function renderChart() {
     const chartContainer = document.getElementById("chartContainer");
     chartContainer.innerHTML = "";
@@ -271,11 +291,10 @@
       chartContainer.appendChild(createChartRow(entry.president, entry.count));
     });
 
-    typeAdditionalAnalysis(comparisonSentence);
+    typeComparisonSentence(comparisonSentence);
   }
 
-  // ------------------ Typing animation - second block (after chart) ------------------
-  function typeAdditionalAnalysis(text) {
+  function typeComparisonSentence(text) {
     const secondTypedTextEl = document.getElementById("typedText2");
     secondTypedTextEl.textContent = "";
 
@@ -291,6 +310,5 @@
     typeNextChar();
   }
 
-  // ------------------ Start ------------------
   typeIntroText();
 })();

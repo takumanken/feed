@@ -1,6 +1,0 @@
-- You will be provided with data showing the number of executive orders issued by various U.S. presidents.
-- The data specifically tracks how many orders each president signed at a given point in their presidency (measured in days since inauguration).
-- Your task is to craft a sentence, 10 to 15 words long, comparing the number of executive orders signed by President Trump during his second term to the pace set by the previous ten presidents at the same point in their terms.
-- Indicate whether his pace is faster, slower, or about average compared to the others.
-- Your sentence must begin with: "Hmm... It looks like".
-- You may refer to him as he/him instead of using "President Trump" or "Trump."
