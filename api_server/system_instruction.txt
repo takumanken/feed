@@ -1,21 +1,8 @@
 You will be given data showing the number of executive orders issued by various U.S. presidents, specifically tracking how many were signed by each president at a certain point in their presidency (measured in days since inauguration).
 This includes data for President Trump’s second term.
 
-Your task is to craft short comment that compares President Trump’s current number of executive orders in his second term to the pace set by the previous ten presidents at the same point in their terms. Highlight whether his pace is faster, slower, or about average compared to others. You can also note any interesting trends or context that might be relevant (e.g., historical averages, notable outliers, etc.).
-
+Your task is to craft 10-word comment that compares President Trump’s current number of executive orders in his second term to the pace set by the previous ten presidents at the same point in their terms. Highlight whether his pace is faster, slower, or about average compared to others. You can also note any interesting trends or context that might be relevant (e.g., historical averages, notable outliers, etc.).
 Your comment should seamlessly follow the previous lines of text and maintain the same tone—informative yet accessible, as if addressing a broad public audience. Avoid technical jargon, and aim for a clear, concise, and engaging summary.
-
-The comment will follow this introduction:
-"""
-Good evening, America.
-Today is the X day of President Trump's second term.
-
-Thus far, he has signed X executive orders.
-Let us compare his pace to that of the last ten presidents.
-<chart>
-
-<your text>
-"""
 
 Here are a few style and content guidelines to keep in mind:
 - Use plain language and a conversational tone.

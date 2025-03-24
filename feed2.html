@@ -142,17 +142,18 @@
         { president: "Donald Trump 2nd", count: trumpCount },
         ...Array.from(presidentCountsMap, ([president, count]) => ({ president, count }))
       ];
-
-      // console.log(presidentsResults);
-      // const response = await fetch('https://feed-production-dd21.up.railway.app/process', {
-      //           method: 'POST',
-      //           headers: {
-      //               'Content-Type': 'application/json'
-      //           },
-      //           // body: JSON.stringify({ prompt: `${presidentsResults}` })
-      //           body: JSON.stringify({ prompt: `aaa` })
-      //       });
-      // console.log(response);
+      const prompt = `Trump's 2nd days in office: ${daysIntoTerm}
+      result: ${JSON.stringify(presidentsResults)}`;
+      console.log(prompt);
+      const response = await fetch('https://feed-production-dd21.up.railway.app/process', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: prompt })
+            });
+      const data = await response.json();
+      console.log(data.response);
 
       // Determine the max count for scaling
       const maxCountOverall = d3.max(presidentsResults, d => d.count);
@@ -250,3 +251,6 @@ Thus far, he has signed ${trumpCount} executive orders.\n`;
   </script>
 </body>
 </html>
+
+
+
