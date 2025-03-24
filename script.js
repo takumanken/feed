@@ -132,7 +132,7 @@
 Did you remember that Trump used to be president?
 In his second term, President Trump signed ${trumpOrderCount} executive orders.\n
 Let us compare his pace to that of the ten presidents before his presidency.
-    `;
+`;
   } else {
     baseText = `
 Today is the ${daysInOffice} day of President Trump's second term.
