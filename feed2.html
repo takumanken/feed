@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Terminal-Style Trump 2nd Term Summary</title>
+
   <style>
+    /* General styling remains the same except for height changes */
     body {
-      background-color: #fff;
+      background: #fff;
       color: #000;
       font-family: "Courier New", monospace;
       display: flex;
@@ -14,30 +16,34 @@
       align-items: center;
       height: 90vh;
       margin: 0;
-      padding: 20px;
+      padding: 150px 0 0;
     }
+
+    /* Default container style without explicit height */
     .typing-container {
       font-size: 1.4rem;
       line-height: 1.5;
-      white-space: pre-wrap;
+      white-space: normal;
       text-align: left;
       width: 80%;
+      /* Removed height: 100%; so these containers can size automatically */
       padding: 10px;
-      margin-bottom: 0px;
+      margin-bottom: 0;
       position: relative;
     }
-    .cursor {
-      display: inline-block;
-      width: 2px;
-      height: 1em;
-      background-color: #000;
-      animation: blink 0.7s steps(1) infinite;
+
+    /* Make the first block fill available vertical space */
+    #typing {
+      height: 25vh;
     }
-    @keyframes blink {
-      0% { opacity: 1; }
-      50% { opacity: 0; }
-      100% { opacity: 1; }
+
+    /* Let the second block (#typing2) auto-size */
+    #typing2 {
+      margin-top: 20px;
+      height: auto; /* This is optional; auto is default if unset */
     }
+
+    /* Chart styling */
     .chart-container {
       width: 80%;
       font-family: "Courier New", monospace;
@@ -55,14 +61,14 @@
       margin-right: 20px;
     }
     .bar-container {
-      background-color: #fff;
+      background: #fff;
       flex-grow: 1;
       height: 24px;
       position: relative;
       margin-right: 20px;
     }
     .bar {
-      background-color: #3b3b3b;
+      background: #3b3b3b;
       height: 100%;
     }
     .count-label {
@@ -72,26 +78,40 @@
   </style>
 </head>
 <body>
+
+  <!-- First typing block (takes full vertical space) -->
   <div class="typing-container" id="typing">
-    <span id="typedText">Loading...</span><span id="cursor" class="cursor"></span>
+    <span id="typingWrapper1">
+      <span id="typedText">Loading...</span>
+    </span>
   </div>
+
+  <!-- Chart container -->
   <div class="chart-container" id="chartContainer"></div>
 
-  <!-- Add D3.js CDN -->
+  <!-- Second typing block (auto height) -->
+  <div class="typing-container" id="typing2">
+    <span id="typingWrapper2">
+      <span id="typedText2"></span>
+    </span>
+  </div>
+
+  <!-- D3 library -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <script>
     (async function () {
+      // ------------------ Basic Configuration ------------------
       const trump2ndStartDate = "2025-01-20";
-      const ordersEndpoint = "data/trump_executive_orders.json";
-      const pastEndpoint = "data/past_president_executive_orders.json";
+      const trumpOrdersUrl    = "data/trump_executive_orders.json";
+      const pastPresUrl       = "data/past_president_executive_orders.json";
 
+      // ------------------ Helper Functions ------------------
       function getGreeting() {
-        const now = new Date();
-        const hour = now.getHours();
-        if (hour < 12) return "Good morning";
-        else if (hour < 18) return "Good afternoon";
-        else return "Good evening";
+        const hour = new Date().getHours();
+        if (hour >= 4 && hour < 12) return "Good morning";
+        if (hour >= 12 && hour < 18) return "Good afternoon";
+        return "Good evening";
       }
 
       function daysBetween(date1, date2) {
@@ -99,110 +119,118 @@
         return Math.floor((date2 - date1) / msPerDay);
       }
 
+      // ------------------ Calculate Days in Term ------------------
       const now = new Date();
       const greeting = getGreeting();
       const termStart = new Date(trump2ndStartDate);
       const daysIntoTerm = daysBetween(termStart, now);
 
-      // --- Fetch Trump's Executive Orders ---
+      // ------------------ Fetch Trump's Orders ------------------
       let trumpCount = 0;
       try {
-        const response = await fetch(ordersEndpoint);
+        const response = await fetch(trumpOrdersUrl);
         const data = await response.json();
-        const orders = data.results;
-        trumpCount = orders.length;
+        trumpCount = data.results.length;
       } catch (error) {
-        console.error("Error fetching Trump's executive orders data:", error);
+        console.error("Error fetching Trump's orders:", error);
       }
 
-      // --- Fetch Past Presidents' Data ---
+      // ------------------ Fetch Past Presidents' Data ------------------
       let pastDataArray = [];
       try {
-        const pastResponse = await fetch(pastEndpoint);
+        const pastResponse = await fetch(pastPresUrl);
         const pastData = await pastResponse.json();
+        // Some responses might place results at `data.results`; handle both
         pastDataArray = pastData.results ? pastData.results : pastData;
       } catch (error) {
-        console.error("Error fetching past executive orders data:", error);
+        console.error("Error fetching past presidents' data:", error);
       }
 
-      // --- Use d3.rollup to count executive orders per president within daysIntoTerm ---
+      // Filter past presidents' orders for the same number of days in office
+      const filteredPastData = pastDataArray.filter(order => {
+        const startDate   = new Date(order.start_date);
+        const signingDate = new Date(order.signing_date);
+        return daysBetween(startDate, signingDate) <= daysIntoTerm;
+      });
+
+      // Summarize counts by president
       const presidentCountsMap = d3.rollup(
-        pastDataArray.filter(order => {
-          const startDate = new Date(order.start_date);
-          const signingDate = new Date(order.signing_date);
-          const diff = daysBetween(startDate, signingDate);
-          return diff <= daysIntoTerm;
-        }),
-        v => v.length,
-        d => d.president
+        filteredPastData,
+        orders => orders.length,
+        order  => order.president
       );
 
-      // Convert to array of objects and add Trump's count
+      // Combine Trump's 2nd term with past data
       const presidentsResults = [
         { president: "Donald Trump 2nd", count: trumpCount },
         ...Array.from(presidentCountsMap, ([president, count]) => ({ president, count }))
       ];
-      const prompt = `Trump's 2nd days in office: ${daysIntoTerm}
-      result: ${JSON.stringify(presidentsResults)}`;
-      console.log(prompt);
-      const response = await fetch('https://feed-production-dd21.up.railway.app/process', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt: prompt })
-            });
-      const data = await response.json();
-      const text = data.response;
 
-      // Determine the max count for scaling
-      const maxCountOverall = d3.max(presidentsResults, d => d.count);
+      // Log a prompt for an external service
+      const promptText = `Trump's 2nd days in office: ${daysIntoTerm}\n` +
+                         `result: ${JSON.stringify(presidentsResults)}`;
+      console.log(promptText);
 
-      // --- Compose Full Text ---
-      let fullText = `
-${greeting}, America.
-Today is the ${daysIntoTerm} day of President Trump's second term.
+      // ------------------ Fetch Additional Text ------------------
+      let additionalText = "";
+      try {
+        const externalResponse = await fetch("https://feed-production-dd21.up.railway.app/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: promptText })
+        });
+        const externalData = await externalResponse.json();
+        additionalText = (externalData.response || "").trim();
+      } catch (error) {
+        console.error("Error fetching external text:", error);
+      }
 
-Thus far, he has signed ${trumpCount} executive orders.\n`;
-      fullText += `Let us compare his pace to that of the last ten presidents.`;
-
-      // --- Typing Effect ---
+      // ------------------ First Typing Block ------------------
       const typedTextEl = document.getElementById("typedText");
       typedTextEl.textContent = "";
 
+      const initialText = `
+${greeting}, America.
+Today is the ${daysIntoTerm} day of President Trump's second term.
+
+So far, he has signed ${trumpCount} executive orders.
+Let us compare his pace to that of the last ten presidents.`;
+
       let charIndex = 0;
       function typeText() {
-        if (charIndex < fullText.length) {
-          const currentChar = fullText.charAt(charIndex);
-          if (currentChar === "\n") {
-            typedTextEl.innerHTML += "<br>";
-          } else {
-            typedTextEl.innerHTML += currentChar;
-          }
+        if (charIndex < initialText.length) {
+          const currentChar = initialText.charAt(charIndex);
+          typedTextEl.innerHTML += (currentChar === "\n") ? "<br>" : currentChar;
           charIndex++;
           setTimeout(typeText, 30);
         } else {
-          showLoading(renderChart);
+          showLoadingThenChart();
         }
       }
 
-      function showLoading(callback) {
+      function showLoadingThenChart() {
         let dotCount = 0;
         const loadingInterval = setInterval(() => {
           dotCount = (dotCount + 1) % 4;
-          typedTextEl.innerHTML = fullText.split("\n").join("<br>") + "<br><br><br>Loading" + ".".repeat(dotCount);
+          typedTextEl.innerHTML =
+            initialText.split("\n").join("<br>") + 
+            "<br><br><br>Loading" + ".".repeat(dotCount);
         }, 500);
+
+        // Stop after 3 seconds, render the chart
         setTimeout(() => {
           clearInterval(loadingInterval);
-          typedTextEl.innerHTML = fullText.split("\n").join("<br>");
-          callback();
-        }, 4000);
+          typedTextEl.innerHTML = initialText.split("\n").join("<br>");
+          renderChart();
+        }, 3000);
       }
 
-      // --- Render Chart ---
+      // ------------------ Chart Rendering ------------------
       function renderChart() {
         const chartContainer = document.getElementById("chartContainer");
         chartContainer.innerHTML = "";
+
+        const maxCountOverall = d3.max(presidentsResults, d => d.count);
 
         function createChartRow(label, count) {
           const row = document.createElement("div");
@@ -218,9 +246,7 @@ Thus far, he has signed ${trumpCount} executive orders.\n`;
 
           const bar = document.createElement("div");
           bar.className = "bar";
-
-          const percentage = maxCountOverall > 0 ? (count / maxCountOverall) * 100 : 0;
-          bar.style.width = percentage + "%";
+          bar.style.width = maxCountOverall ? (count / maxCountOverall) * 100 + "%" : "0%";
 
           barContainer.appendChild(bar);
           row.appendChild(barContainer);
@@ -233,24 +259,32 @@ Thus far, he has signed ${trumpCount} executive orders.\n`;
           return row;
         }
 
-        // Render each president row from consolidated results
         presidentsResults.forEach(entry => {
           chartContainer.appendChild(createChartRow(entry.president, entry.count));
         });
 
-        // Stop cursor blinking
-        const cursorEl = document.getElementById("cursor");
-        if (cursorEl) {
-          cursorEl.style.display = "none";
-        }
+        typeAdditionalText(additionalText);
       }
 
-      // Start typing!
+      // ------------------ Second Typing Block ------------------
+      function typeAdditionalText(str) {
+        const typedTextEl2 = document.getElementById("typedText2");
+        typedTextEl2.textContent = "";
+
+        let i = 0;
+        function typeNext() {
+          if (i < str.length) {
+            typedTextEl2.innerHTML += (str.charAt(i) === "\n") ? "<br>" : str.charAt(i);
+            i++;
+            setTimeout(typeNext, 30);
+          }
+        }
+        typeNext();
+      }
+
+      // ------------------ Start the typing animation ------------------
       typeText();
     })();
   </script>
 </body>
 </html>
-
-
-
