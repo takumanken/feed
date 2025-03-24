@@ -23,15 +23,23 @@ app = FastAPI()
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=[
+#         "https://takumanken.github.io",
+#         "https://127.0.0.1:5500",
+#     ],
+#     allow_credentials=False,
+#     allow_methods=["POST"],
+#     allow_headers=["Content-Type"],
+# )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://takumanken.github.io",
-        "http://127.0.0.1:5500",
-    ],
-    allow_credentials=False,
-    allow_methods=["POST"],
-    allow_headers=["Content-Type"],
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Define Pydantic model for request
