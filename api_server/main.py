@@ -17,7 +17,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://takumanken.github.io",
-        "https://127.0.0.1:5500",
+        "http://127.0.0.1:5500",
     ],
     allow_credentials=False,
     allow_methods=["POST"],
