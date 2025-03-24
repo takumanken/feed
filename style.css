@@ -1,150 +1,68 @@
-/* ------------------------------------------------------
-   COLOR PALETTE REFERENCE
-------------------------------------------------------
-   Navy:   #2F4156
-   Teal:   #567C9D
-   Sky:    #CBD9E6
-   Beige:  #F5EEEB
-   White:  #FFFFFF
------------------------------------------------------- */
-
-/* 1) Global Reset, Fonts, and Background */
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: 'Inter', sans-serif;
-  background-color: #F5EEEB; /* Beige background */
-  color: #2F4156; /* Navy text */
-}
-
-/* 2) Outer Container */
-.outer {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* 3) Header Styling */
-.outer > h2 {
-  margin: 0;
-  padding: 15px 20px;
-  flex-shrink: 0;
-  background: #2F4156; /* Navy */
-  color: #fff;         /* White text */
-  font-size: 22px;
-  text-align: center;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-/* 4) Inner Container */
-.container {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  gap: 20px;
-  padding: 20px;
-  box-sizing: border-box;
-  background-color: #F5EEEB; /* Beige */
-}
-
-/* 5) Chart & Table Sections (Cards) */
-#myplot, #tableSection {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: #FFFFFF; /* White */
-  border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-#myplot h3, #tableSection h3 {
-  margin-top: 0;
-  font-size: 18px;
-  font-weight: 500;
-  color: #567C9D; /* Teal */
-  border-bottom: 2px solid #CBD9E6; /* Sky divider */
-  padding-bottom: 10px;
-}
-
-/* 6) Scrollable Table Section */
-#tableScroll {
-  flex: 1;
-  overflow-y: auto;
-  margin-top: 15px;
-  box-sizing: border-box;
-}
-
-/* 7) Table Styling */
-#trumpOrdersTable {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 5px;
-  font-size: 14px;
-}
-
-#trumpOrdersTable thead tr {
-  background: #CBD9E6; /* Sky */
-}
-
-#trumpOrdersTable thead th {
-  text-transform: uppercase;
-  font-weight: 600;
-  color: #2F4156; /* Navy */
-  font-size: 13px;
-  padding: 10px;
-  border-bottom: 2px solid #567C9D;
-}
-
-/* Body rows on a white card background */
-#trumpOrdersTable tbody tr {
+body {
   background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  color: #000;
+  font-family: "Courier New", monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 90vh;
+  margin: 0;
+  padding: 90px 0 0;
 }
 
-#trumpOrdersTable tbody tr td {
-  border-bottom: none;
-  padding: 12px 15px;
-}
-
-#trumpOrdersTable tbody tr + tr {
-  margin-top: 5px;
-}
-
-#trumpOrdersTable td, #trumpOrdersTable th {
+.typing-container {
+  font-size: 1.4rem;
+  line-height: 1.5;
+  white-space: normal;
   text-align: left;
+  width: 80%;
+  padding: 10px;
+  margin-bottom: 0;
+  position: relative;
 }
 
-/* Links in Teal */
-#trumpOrdersTable td a {
-  color: #567C9D;
-  text-decoration: none;
-}
-#trumpOrdersTable td a:hover {
-  text-decoration: underline;
+#typing {
+  height: 25vh;
 }
 
-/* Hover effect with a light Sky tint */
-#trumpOrdersTable tbody tr:hover {
-  background: #CBD9E6;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+#typing2 {
+  margin-top: 40px;
+  height: auto;
 }
 
-/* 8) Tooltip Styling */
-.d3-tooltip {
-  position: absolute;
-  pointer-events: none;
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-  padding: 8px;
-  border-radius: 4px;
-  font-size: 13px;
-  transition: opacity 0.2s ease-in-out;
-  opacity: 0;
+.chart-container {
+  width: 80%;
+  font-family: "Courier New", monospace;
+  padding: 10px;
+  font-size: 1.2rem;
+}
+
+.chart-row {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.president-label {
+  width: 300px;
+  text-align: left;
+  margin-right: 20px;
+}
+
+.bar-container {
+  background: #fff;
+  flex-grow: 1;
+  height: 24px;
+  position: relative;
+  margin-right: 20px;
+}
+
+.bar {
+  background: #3b3b3b;
+  height: 100%;
+}
+
+.count-label {
+  width: 50px;
+  text-align: left;
 }
