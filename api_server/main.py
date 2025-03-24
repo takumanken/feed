@@ -1,39 +1,18 @@
-import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from dotenv import load_dotenv
 import os
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Initialize environment and FastAPI app
+# Load environment variables
 load_dotenv()
+
+# Initialize FastAPI
 app = FastAPI()
 
-# Configure rate limiting and CORS middleware
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=[
-#         "https://takumanken.github.io",
-#         "https://127.0.0.1:5500",
-#     ],
-#     allow_credentials=False,
-#     allow_methods=["POST"],
-#     allow_headers=["Content-Type"],
-# )
-
+# Basic CORS settings
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,34 +21,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define Pydantic model for request
+# Request model
 class PromptRequest(BaseModel):
     prompt: str
 
-# Define constants and initialize Gemini API client
+# Retrieve API key from environment
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Initialize Gemini Client
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+# Read system instruction from file
 SYSTEM_INSTRUCTION_FILE = "system_instruction.txt"
-with open(SYSTEM_INSTRUCTION_FILE, "r") as file:
-    system_instruction = file.read()
+with open(SYSTEM_INSTRUCTION_FILE, "r", encoding="utf-8") as f:
+    system_instruction = f.read()
 
 @app.post("/process")
-@limiter.limit("10/minute")
-async def process_prompt(request_data: PromptRequest, request: Request):
-    """Process a prompt, generate SQL, execute it and return the result."""
-    logger.info("Received prompt request.")
+async def process_prompt(request_data: PromptRequest):
     try:
-        # Generate response using Gemini API
+        # Generate content with Gemini
         response = client.models.generate_content(
             model="gemini-2.0-flash",
-                        config=types.GenerateContentConfig(system_instruction=system_instruction),
+            config=types.GenerateContentConfig(system_instruction=system_instruction),
             contents=[request_data.prompt],
         )
+        # Extract text from response
         json_text = response.candidates[0].content.parts[0].text
-        return JSONResponse(content={
-            "response": json_text
-        })
-
-    except Exception as error:
-        logger.exception("Error processing prompt.")
-        return JSONResponse(status_code=500, content={"error": str(error)})
+        return {"response": json_text}
+    except Exception as e:
+        # Return simple error message for debugging
+        return {"error": str(e)}
