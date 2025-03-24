@@ -1,6 +1,7 @@
 (async function () {
-  // Config
+  // ------------------ Config ------------------
   const trumpSecondTermStartDate = "2025-01-20";
+  const trumpSecondTermEndDate = "2029-01-20";
 
   // Animation speed (ms)
   const typingSpeed = 20;
@@ -13,7 +14,7 @@
   const pastPresidentsOrdersPath = "data/past_president_executive_orders.json";
   const externalApiUrl = "https://feed-production-dd21.up.railway.app/process";
 
-  // Helpers
+  // ------------------ Helpers ------------------
   function getGreeting() {
     const hour = new Date().getHours();
     if (hour >= 4 && hour < 12) return "Good morning";
@@ -55,13 +56,18 @@
     }
   }
 
-  // Data preparation
+  // ------------------ Data preparation ------------------
   const currentDate = new Date();
+  // const currentDate = new Date("2029-01-21"); // Test date
+
   const greetingText = getGreeting();
   const termStartDate = new Date(trumpSecondTermStartDate);
+  const termEndDate = new Date(trumpSecondTermEndDate);
   const daysInOffice = getDaysBetween(termStartDate, currentDate);
 
-  // Fetch Trump's orders
+  const isAfterTerm = currentDate >= termEndDate;
+
+  // ------------------ Fetch Trump's orders ------------------
   let trumpOrders = [];
   try {
     // trumpOrders = await fetchTrumpOrdersFromAPI(trumpOrdersApiUrl);
@@ -74,7 +80,7 @@
 
   const trumpOrderCount = trumpOrders.length;
 
-  // Fetch past presidents' orders
+  // ------------------ Fetch past presidents' orders ------------------
   let pastPresidentsOrders = [];
   try {
     const response = await fetch(pastPresidentsOrdersPath);
@@ -108,7 +114,7 @@
 
   console.log(apiPrompt);
 
-  // Fetch additional analysis text
+  // ------------------ Fetch additional analysis text ------------------
   let additionalAnalysis = "";
   try {
     const response = await fetch(externalApiUrl, {
@@ -122,16 +128,22 @@
     console.error("Error fetching external analysis:", error);
   }
 
-  // Typing animation - first block
+  // ------------------ Typing animation - first block ------------------
   const firstTypedTextEl = document.getElementById("typedText");
   firstTypedTextEl.textContent = "";
 
-  const introText = `
-${greetingText}, America.
-Today is the ${daysInOffice} day of President Trump's second term.
+  // ------------------ Compose intro text based on whether the term ended ------------------
+  let introText = `${greetingText}, America.\n\n`;
 
-So far, he has signed ${trumpOrderCount} executive orders.
-Let us compare his pace to that of the last ten presidents.`;
+  if (isAfterTerm) {
+    introText += `Have you remembered that Trump used to be president?\n`;
+    introText += `In his second term, President Trump signed ${trumpOrderCount} executive orders.\n\n`;
+    introText += `Let us compare his pace to that of the ten presidents before his presidency.`;
+  } else {
+    introText += `Today is the ${daysInOffice} day of President Trump's second term.\n`;
+    introText += `So far, he has signed ${trumpOrderCount} executive orders.\n\n`;
+    introText += `Let us compare his pace to that of the last ten presidents.`;
+  }
 
   let introCharIndex = 0;
   function typeIntroText() {
@@ -159,7 +171,7 @@ Let us compare his pace to that of the last ten presidents.`;
     }, 3000);
   }
 
-  // Chart rendering
+  // ------------------ Chart rendering ------------------
   function renderChart() {
     const chartContainer = document.getElementById("chartContainer");
     chartContainer.innerHTML = "";
@@ -200,7 +212,7 @@ Let us compare his pace to that of the last ten presidents.`;
     typeAdditionalAnalysis(additionalAnalysis);
   }
 
-  // Typing animation - second block
+  // ------------------ Typing animation - second block ------------------
   function typeAdditionalAnalysis(text) {
     const secondTypedTextEl = document.getElementById("typedText2");
     secondTypedTextEl.textContent = "";
@@ -217,6 +229,6 @@ Let us compare his pace to that of the last ten presidents.`;
     typeNextChar();
   }
 
-  // Start
+  // ------------------ Start ------------------
   typeIntroText();
 })();
