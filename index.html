@@ -6,7 +6,6 @@
   <title>Terminal-Style Trump 2nd Term Summary</title>
 
   <style>
-    /* General styling remains the same except for height changes */
     body {
       background: #fff;
       color: #000;
@@ -19,47 +18,45 @@
       padding: 90px 0 0;
     }
 
-    /* Default container style without explicit height */
     .typing-container {
       font-size: 1.4rem;
       line-height: 1.5;
       white-space: normal;
       text-align: left;
       width: 80%;
-      /* Removed height: 100%; so these containers can size automatically */
       padding: 10px;
       margin-bottom: 0;
       position: relative;
     }
 
-    /* Make the first block fill available vertical space */
     #typing {
       height: 25vh;
     }
 
-    /* Let the second block (#typing2) auto-size */
     #typing2 {
-      margin-top: 20px;
-      height: auto; /* This is optional; auto is default if unset */
+      margin-top: 40px;
+      height: auto;
     }
 
-    /* Chart styling */
     .chart-container {
       width: 80%;
       font-family: "Courier New", monospace;
       padding: 10px;
       font-size: 1.2rem;
     }
+
     .chart-row {
       display: flex;
       align-items: center;
       margin: 8px 0;
     }
+
     .president-label {
       width: 300px;
       text-align: left;
       margin-right: 20px;
     }
+
     .bar-container {
       background: #fff;
       flex-grow: 1;
@@ -67,10 +64,12 @@
       position: relative;
       margin-right: 20px;
     }
+
     .bar {
       background: #3b3b3b;
       height: 100%;
     }
+
     .count-label {
       width: 50px;
       text-align: left;
@@ -79,32 +78,29 @@
 </head>
 <body>
 
-  <!-- First typing block (takes full vertical space) -->
   <div class="typing-container" id="typing">
     <span id="typingWrapper1">
       <span id="typedText">Loading...</span>
     </span>
   </div>
 
-  <!-- Chart container -->
   <div class="chart-container" id="chartContainer"></div>
 
-  <!-- Second typing block (auto height) -->
   <div class="typing-container" id="typing2">
     <span id="typingWrapper2">
       <span id="typedText2"></span>
     </span>
   </div>
 
-  <!-- D3 library -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <script>
     (async function () {
+
       // ------------------ Basic Configuration ------------------
       const trump2ndStartDate = "2025-01-20";
-      const trumpOrdersUrl    = "data/trump_executive_orders.json";
-      const pastPresUrl       = "data/past_president_executive_orders.json";
+      const initialTrumpOrdersUrl = "https://www.federalregister.gov/api/v1/documents?conditions%5Bcorrection%5D=0&conditions%5Bpresident%5D=donald-trump&conditions%5Bpresidential_document_type%5D=executive_order&conditions%5Bsigning_date%5D%5Bgte%5D=01%2F20%2F2025&conditions%5Bsigning_date%5D%5Blte%5D=03%2F25%2F2025&conditions%5Btype%5D%5B%5D=PRESDOCU&fields%5B%5D=citation&fields%5B%5D=document_number&fields%5B%5D=end_page&fields%5B%5D=html_url&fields%5B%5D=pdf_url&fields%5B%5D=type&fields%5B%5D=subtype&fields%5B%5D=publication_date&fields%5B%5D=signing_date&fields%5B%5D=start_page&fields%5B%5D=title&fields%5B%5D=disposition_notes&fields%5B%5D=executive_order_number&fields%5B%5D=not_received_for_publication&fields%5B%5D=full_text_xml_url&fields%5B%5D=body_html_url&fields%5B%5D=json_url&format=json&include_pre_1994_docs=true&order=executive_order&page=1&per_page=10000";
+      const pastPresUrl = "data/past_president_executive_orders.json";
 
       // ------------------ Helper Functions ------------------
       function getGreeting() {
@@ -119,54 +115,90 @@
         return Math.floor((date2 - date1) / msPerDay);
       }
 
+      async function fetchAllResults(initialUrl) {
+        let currentUrl = initialUrl;
+        let allResults = [];
+
+        try {
+          while (currentUrl) {
+            console.log(`Fetching: ${currentUrl}`);
+
+            const response = await fetch(currentUrl);
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (Array.isArray(data.results)) {
+              allResults = allResults.concat(data.results);
+            }
+
+            currentUrl = data.next_page_url || null;
+          }
+
+          console.log("Fetched all Trump executive orders:", allResults);
+          return allResults;
+
+        } catch (error) {
+          console.error('Error fetching Trump executive orders:', error);
+          return [];
+        }
+      }
+
       // ------------------ Calculate Days in Term ------------------
       const now = new Date();
       const greeting = getGreeting();
       const termStart = new Date(trump2ndStartDate);
       const daysIntoTerm = daysBetween(termStart, now);
 
-      // ------------------ Fetch Trump's Orders ------------------
-      let trumpCount = 0;
+      // ------------------ Fetch Trump's Orders (UPDATED) ------------------
+      let trumpResults = [];
       try {
-        const response = await fetch(trumpOrdersUrl);
+
+        // ORIGINAL FETCH
+        // trumpResults = await fetchAllResults(initialTrumpOrdersUrl);
+
+        // FILE-BASED FETCH
+        const response = await fetch("data/trump_executive_orders.json");
         const data = await response.json();
-        trumpCount = data.results.length;
+        trumpResults = data.results || [];
+
       } catch (error) {
         console.error("Error fetching Trump's orders:", error);
       }
+
+
+      const trumpCount = trumpResults.length;
 
       // ------------------ Fetch Past Presidents' Data ------------------
       let pastDataArray = [];
       try {
         const pastResponse = await fetch(pastPresUrl);
         const pastData = await pastResponse.json();
-        // Some responses might place results at `data.results`; handle both
         pastDataArray = pastData.results ? pastData.results : pastData;
       } catch (error) {
         console.error("Error fetching past presidents' data:", error);
       }
 
-      // Filter past presidents' orders for the same number of days in office
       const filteredPastData = pastDataArray.filter(order => {
-        const startDate   = new Date(order.start_date);
+        const startDate = new Date(order.start_date);
         const signingDate = new Date(order.signing_date);
         return daysBetween(startDate, signingDate) <= daysIntoTerm;
       });
 
-      // Summarize counts by president
       const presidentCountsMap = d3.rollup(
         filteredPastData,
         orders => orders.length,
-        order  => order.president
+        order => order.president
       );
 
-      // Combine Trump's 2nd term with past data
       const presidentsResults = [
         { president: "Donald Trump 2nd", count: trumpCount },
         ...Array.from(presidentCountsMap, ([president, count]) => ({ president, count }))
       ];
 
-      // Log a prompt for an external service
       const promptText = `Trump's 2nd days in office: ${daysIntoTerm}\n` +
                          `result: ${JSON.stringify(presidentsResults)}`;
       console.log(promptText);
@@ -217,7 +249,6 @@ Let us compare his pace to that of the last ten presidents.`;
             "<br><br><br>Loading" + ".".repeat(dotCount);
         }, 500);
 
-        // Stop after 3 seconds, render the chart
         setTimeout(() => {
           clearInterval(loadingInterval);
           typedTextEl.innerHTML = initialText.split("\n").join("<br>");
